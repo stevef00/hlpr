@@ -4,7 +4,9 @@ import argparse
 import sys
 import os
 import readline
+import subprocess
 import textwrap
+import tempfile
 from openai import OpenAI
 from spinner import Spinner
 
@@ -21,7 +23,7 @@ def read_file(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
-    except Exception as e:
+    except OSError as e:
         print(f"Error reading file: {str(e)}")
         sys.exit(1)
 
@@ -58,6 +60,19 @@ def get_terminal_width():
         return 80  # Default width if we can't get terminal size
 
 
+def handle_edit_command():
+    """Handle the :edit command by opening an editor and returning the edited text."""
+    editor = os.getenv("EDITOR", "vi")
+    with tempfile.NamedTemporaryFile(suffix=".txt", mode="w+", delete=False) as tmp:
+        tmp.flush()
+        subprocess.run([editor, tmp.name], check=True)
+        tmp.close()  # Ensure file is closed before reading
+        with open(tmp.name, 'r', encoding="utf-8") as f:
+            user_input = f.read().strip()
+        os.unlink(tmp.name)  # Clean up the temp file
+    return user_input
+
+
 def repl_run(client, messages, args):
     try:
         while True:
@@ -65,6 +80,10 @@ def repl_run(client, messages, args):
 
             if user_input.lower() in ["exit", "quit"]:
                 break
+            if user_input == ":edit":
+                user_input = handle_edit_command()
+                if not user_input:
+                    continue
 
             messages.append({"role": "user", "content": user_input})
 
