@@ -41,6 +41,8 @@ def parse_args():
         help="Include file contents in conversation")
     parser.add_argument("-s", "--stats", action="store_true",
         help="Show token usage statistics")
+    parser.add_argument("-w", "--web", action="store_true",
+        help="Enable web search")
 
     return parser.parse_args()
 
@@ -55,14 +57,23 @@ def repl_run(client, messages, args):
 
             messages.append({"role": "user", "content": user_input})
 
+            create_args = {
+                "model": args.model,
+                "input": messages,
+                "tools": []
+            }
+
+            if args.web:
+                create_args["tools"].append({
+                    "type": "web_search_preview",
+                    "search_context_size": "low",
+                })
+
             # This uses the **new** responses API -- don't change this to
             #   client.chat.completions.create()
-            response = client.responses.create(
-              model=args.model,
-              input=messages
-            )
+            response = client.responses.create(**create_args)
 
-            assistant_text = response.output[0].content[0].text
+            assistant_text = response.output_text
             print("------------------------------------------------")
             print(assistant_text)
 

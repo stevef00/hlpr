@@ -20,7 +20,7 @@ class DummyUsage:
 
 class DummyResponse:
     def __init__(self, text="dummy"):
-        self.output = [SimpleNamespace(content=[SimpleNamespace(text=text)])]
+        self.output_text = text
         self.usage = DummyUsage()
 
 
@@ -30,8 +30,8 @@ class DummyClient:
         self.responses = SimpleNamespace(create=self._create)
         self.calls = []
 
-    def _create(self, model, input):
-        self.calls.append((model, input))
+    def _create(self, model, input, tools):
+        self.calls.append((model, input, tools))
         return self._response
 
 
@@ -42,6 +42,7 @@ def test_parse_args_defaults(monkeypatch):
     assert args.list_models is False
     assert args.file is None
     assert args.stats is False
+    assert args.web is False
 
 
 def test_parse_args_custom(monkeypatch):
@@ -49,6 +50,10 @@ def test_parse_args_custom(monkeypatch):
     args = parse_args()
     assert args.model == "gpt-4o"
 
+def test_parse_args_web(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["hlpr", "--web"])
+    args = parse_args()
+    assert args.web is True
 
 def test_read_file(tmp_path):
     f = tmp_path / "sample.txt"
@@ -78,7 +83,7 @@ def test_print_stats(capsys):
 
 def test_repl_run(monkeypatch):
     client = DummyClient("hi")
-    args = argparse.Namespace(model="gpt-4o-mini", stats=False)
+    args = argparse.Namespace(model="gpt-4o-mini", stats=False, web=False)
     messages = []
 
     inputs = iter(["hello", "exit"])
@@ -91,3 +96,23 @@ def test_repl_run(monkeypatch):
     assert messages[1]["role"] == "assistant"
     assert messages[1]["content"] == "hi"
     assert client.calls[0][0] == "gpt-4o-mini"
+
+
+def test_repl_run_with_web(monkeypatch):
+    client = DummyClient("hi")
+    args = argparse.Namespace(model="gpt-4o-mini", stats=False, web=True)
+    messages = []
+
+    inputs = iter(["hello", "exit"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(inputs))
+
+    repl_run(client, messages, args)
+
+    # Verify the API call included the web search tool
+    assert len(client.calls) > 0
+    model, input_text, tools = client.calls[0]
+    assert model == "gpt-4o-mini"
+    assert tools is not None
+    assert len(tools) == 1
+    assert tools[0]["type"] == "web_search_preview"
+    assert tools[0]["search_context_size"] == "low"
