@@ -2,6 +2,9 @@
 
 import argparse
 import sys
+import os
+import readline
+import textwrap
 from openai import OpenAI
 from spinner import Spinner
 
@@ -48,10 +51,17 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_terminal_width():
+    try:
+        return os.get_terminal_size().columns
+    except OSError:
+        return 80  # Default width if we can't get terminal size
+
+
 def repl_run(client, messages, args):
     try:
         while True:
-            user_input = input("> ").strip()
+            user_input = input("prompt> ").strip()
 
             if user_input.lower() in ["exit", "quit"]:
                 break
@@ -76,10 +86,13 @@ def repl_run(client, messages, args):
                 response = client.responses.create(**create_args)
 
             assistant_text = response.output_text
-            print("------------------------------------------------")
-            print(assistant_text)
-
             messages.append({"role": "assistant", "content": assistant_text})
+
+            width = get_terminal_width() - 1
+            print("-" * width)
+            for line in assistant_text.splitlines():
+                wrapped = textwrap.fill(line, width=width)
+                print(wrapped)
 
             if args.stats:
                 print_stats(response.usage)
