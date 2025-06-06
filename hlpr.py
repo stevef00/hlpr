@@ -3,6 +3,7 @@
 import argparse
 import sys
 from openai import OpenAI
+from spinner import Spinner
 
 # Available models
 ALLOWED_MODELS = [
@@ -29,7 +30,7 @@ def print_stats(usage):
     total_tokens = usage.total_tokens
     print(f"stats: input_tokens={input_tokens} output_tokens={output_tokens} "
           f"cached_tokens={cached_tokens} total_tokens={total_tokens}")
-    
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple OpenAI Chat REPL")
@@ -71,7 +72,8 @@ def repl_run(client, messages, args):
 
             # This uses the **new** responses API -- don't change this to
             #   client.chat.completions.create()
-            response = client.responses.create(**create_args)
+            with Spinner("Thinking"):
+                response = client.responses.create(**create_args)
 
             assistant_text = response.output_text
             print("------------------------------------------------")
