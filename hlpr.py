@@ -27,7 +27,8 @@ def print_stats(usage):
     output_tokens = usage.output_tokens
     cached_tokens = usage.input_tokens_details.cached_tokens
     total_tokens = usage.total_tokens
-    print(f"stats: input_tokens={input_tokens} output_tokens={output_tokens} cached_tokens={cached_tokens} total_tokens={total_tokens}")
+    print(f"stats: input_tokens={input_tokens} output_tokens={output_tokens} "
+          f"cached_tokens={cached_tokens} total_tokens={total_tokens}")
     
 
 def parse_args():
@@ -49,11 +50,13 @@ def repl_run(client, messages, args):
         while True:
             user_input = input("> ").strip()
 
-            if user_input.lower() in ['exit', 'quit']:
+            if user_input.lower() in ["exit", "quit"]:
                 break
 
             messages.append({"role": "user", "content": user_input})
 
+            # This uses the **new** responses API -- don't change this to
+            #   client.chat.completions.create()
             response = client.responses.create(
               model=args.model,
               input=messages
