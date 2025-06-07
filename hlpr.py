@@ -170,7 +170,7 @@ def responses_create(client, create_args, messages):
 
         response_type = response.output[0].type
 
-        if response_type == "message":
+        if response_type in [ "message", "web_search_call" ]:
             break
         elif response_type == "function_call":
             tool_call = response.output[0]
