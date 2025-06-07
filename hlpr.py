@@ -94,6 +94,73 @@ def handle_edit_command():
         os.unlink(tmp.name)  # Clean up the temp file
     return user_input
 
+
+def handle_show_command(setting, args):
+    if setting == "model":
+        print(f"model={args.model}")
+    elif setting == "web":
+        print(f"web={args.web}")
+    elif setting == "stats":
+        print(f"stats={args.stats}")
+    else:
+        print(f"error: unknown :show parameter '{setting}'")
+
+
+def enable_web_search(create_args):
+    # the setdefault() method returns the value of the item with the specified key.
+    # If the key does not exist, insert the key, with the specified value.
+    tools = create_args.setdefault("tools", [])
+
+    if not any(tool.get("type") == "web_search_preview"  for tool in tools):
+        tools.append({
+            "type": "web_search_preview",
+            "search_context_size": "low",
+        })
+
+
+def disable_web_search(create_args):
+    # This creates a new list and assigns it to create_args["tools"].
+    # We do this instead of removing items from the original list,
+    # because removing while looping can cause skipped or incorrect behavior.
+    create_args["tools"] = [
+        # This is a list comprehension.
+        # The second `tool` (after `for`) is the loop variable — each item in the tools list.
+        # The first `tool` (before `for`) is the value we include in the new list.
+        # The `if` filters which tools are kept:
+        # Only tools where tool["type"] is NOT "web_search_preview" are included.
+        tool for tool in create_args.get("tools", [])
+        if tool.get("type") != "web_search_preview"
+    ]
+
+
+def handle_set_command(setting, args, create_args):
+    if setting.startswith("model="):
+        model = setting.split("=", 1)[1].strip()
+        if model not in ALLOWED_MODELS:
+            print(f"Error: Model '{model}' not in allowed list.")
+            return
+        args.model = model
+        create_args["model"] = model
+
+    elif setting.startswith("web="):
+        value = setting.split("=", 1)[1].strip().lower()
+        args.web = value in ("1", "true", "on", "yes")
+        if args.web:
+            print("DEBUG: enable web search")
+            enable_web_search(create_args)
+
+        else:
+            print("DEBUG: disable web search")
+            disable_web_search(create_args)
+
+    elif setting.startswith("stats="):
+        value = setting.split("=", 1)[1].strip().lower()
+        args.stats = value in ("1", "true", "on", "yes")
+
+    else:
+        print(f"error: unknown :set parameter '{setting}'")
+
+
 def responses_create(client, create_args, messages):
     while True:
         # This uses the **new** responses API -- don't change this to
@@ -153,6 +220,16 @@ def repl_run(client, messages, args):
                 user_input = handle_edit_command()
                 if not user_input:
                     continue
+            if user_input.startswith(":show "):
+                parts = user_input.split(maxsplit=1)
+                if len(parts) > 1:
+                    handle_show_command(parts[1].lstrip(), args)
+                continue
+            if user_input.startswith(":set "):
+                parts = user_input.split(maxsplit=1)
+                if len(parts) > 1:
+                    handle_set_command(parts[1].lstrip(), args, create_args)
+                continue
 
             messages.append({"role": "user", "content": user_input})
 
