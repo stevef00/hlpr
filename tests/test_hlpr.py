@@ -113,6 +113,6 @@ def test_repl_run_with_web(monkeypatch):
     model, input_text, tools = client.calls[0]
     assert model == "gpt-4o-mini"
     assert tools is not None
-    assert len(tools) == 1
-    assert tools[0]["type"] == "web_search_preview"
-    assert tools[0]["search_context_size"] == "low"
+    assert len(tools) == 2
+    assert tools[1]["type"] == "web_search_preview"
+    assert tools[1]["search_context_size"] == "low"
