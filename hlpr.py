@@ -214,6 +214,8 @@ def repl_run(client, messages, args):
         while True:
             user_input = input("prompt> ").strip()
 
+            if user_input == "":
+                continue
             if user_input.lower() in ["exit", "quit"]:
                 break
             if user_input == ":edit":
