@@ -204,7 +204,7 @@ def test_responses_create_function_call(monkeypatch):
     messages = [{"role": "user", "content": "hi"}]
     create_args = {"model": "gpt-4o-mini", "input": messages, "tools": [get_current_datetime_utc_tool()]}
 
-    text = responses_create(client, create_args, messages)
+    text, usage = responses_create(client, create_args, messages)
 
     assert text == "done"
     # Function call output should have been appended
