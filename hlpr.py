@@ -21,7 +21,7 @@ ALLOWED_MODELS = [
 ]
 
 def get_current_datetime_utc():
-    print(f"DEBUG: in call to get_current_datetime_utc()", file=sys.stderr)
+    """Return the current UTC datetime as a string."""
     return str(datetime.now(timezone.utc))
 
 
@@ -125,7 +125,7 @@ def responses_create(client, create_args, messages):
 
     assistant_text = response.output_text
     messages.append({"role": "assistant", "content": assistant_text})
-    return assistant_text
+    return assistant_text, response.usage
 
 
 def repl_run(client, messages, args):
@@ -156,7 +156,7 @@ def repl_run(client, messages, args):
 
             messages.append({"role": "user", "content": user_input})
 
-            assistant_text = responses_create(client, create_args, messages)
+            assistant_text, usage = responses_create(client, create_args, messages)
 
             width = get_terminal_width() - 1
             print("-" * width)
@@ -165,7 +165,7 @@ def repl_run(client, messages, args):
                 print(wrapped)
 
             if args.stats:
-                print_stats(response.usage)
+                print_stats(usage)
 
     except (EOFError, KeyboardInterrupt):
         print("\nExiting.")
@@ -192,7 +192,7 @@ def main():
     if args.file:
         for file_path in args.file:
             file_content = read_file(file_path)
-            developer_message = (
+            developer_message += (
                 f"\nThe user wants to discuss the contents of the file '{file_path}'\n"
                 f"Here is the file content:\n{file_content}\n"
             )
