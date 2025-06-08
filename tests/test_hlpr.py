@@ -211,3 +211,49 @@ def test_responses_create_function_call(monkeypatch):
     assert isinstance(messages[1], DummyOutput)
     assert messages[1].type == "function_call"
     assert messages[2]["type"] == "function_call_output"
+
+
+def test_repl_run_set_model(monkeypatch):
+    client = DummyClient("hi")
+    args = argparse.Namespace(model="gpt-4o-mini", stats=False, web=False)
+    messages = []
+
+    inputs = iter([":set model=gpt-4o", "hello", "exit"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(inputs))
+
+    repl_run(client, messages, args)
+
+    assert args.model == "gpt-4o"
+    assert client.calls[0][0] == "gpt-4o"
+
+
+def test_repl_run_set_web_and_show(monkeypatch, capsys):
+    client = DummyClient("hi")
+    args = argparse.Namespace(model="gpt-4o-mini", stats=False, web=False)
+    messages = []
+
+    inputs = iter([":set web=on", ":show web", "hello", "exit"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(inputs))
+
+    repl_run(client, messages, args)
+
+    out = capsys.readouterr().out
+    assert "web=True" in out
+    assert args.web is True
+    # Web search tool should be included in the API call
+    _, _, tools = client.calls[0]
+    assert any(t.get("type") == "web_search_preview" for t in tools)
+
+
+def test_repl_run_set_stats(monkeypatch, capsys):
+    client = DummyClient("hi")
+    args = argparse.Namespace(model="gpt-4o-mini", stats=False, web=False)
+    messages = []
+
+    inputs = iter([":set stats=on", "hello", "exit"])
+    monkeypatch.setattr(builtins, "input", lambda _: next(inputs))
+
+    repl_run(client, messages, args)
+
+    out = capsys.readouterr().out
+    assert "input_tokens=" in out

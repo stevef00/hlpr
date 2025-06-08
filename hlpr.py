@@ -96,6 +96,7 @@ def handle_edit_command():
 
 
 def handle_show_command(setting, args):
+    """Print the value of the requested setting."""
     if setting == "model":
         print(f"model={args.model}")
     elif setting == "web":
@@ -107,11 +108,10 @@ def handle_show_command(setting, args):
 
 
 def enable_web_search(create_args):
-    # the setdefault() method returns the value of the item with the specified key.
-    # If the key does not exist, insert the key, with the specified value.
+    """Add the web search tool if it isn't already present."""
     tools = create_args.setdefault("tools", [])
 
-    if not any(tool.get("type") == "web_search_preview"  for tool in tools):
+    if not any(tool.get("type") == "web_search_preview" for tool in tools):
         tools.append({
             "type": "web_search_preview",
             "search_context_size": "low",
@@ -119,21 +119,15 @@ def enable_web_search(create_args):
 
 
 def disable_web_search(create_args):
-    # This creates a new list and assigns it to create_args["tools"].
-    # We do this instead of removing items from the original list,
-    # because removing while looping can cause skipped or incorrect behavior.
+    """Remove any web search tools from the API request."""
     create_args["tools"] = [
-        # This is a list comprehension.
-        # The second `tool` (after `for`) is the loop variable — each item in the tools list.
-        # The first `tool` (before `for`) is the value we include in the new list.
-        # The `if` filters which tools are kept:
-        # Only tools where tool["type"] is NOT "web_search_preview" are included.
         tool for tool in create_args.get("tools", [])
         if tool.get("type") != "web_search_preview"
     ]
 
 
 def handle_set_command(setting, args, create_args):
+    """Update runtime settings from a ":set" command."""
     if setting.startswith("model="):
         model = setting.split("=", 1)[1].strip()
         if model not in ALLOWED_MODELS:
