@@ -172,9 +172,8 @@ def responses_create(client, create_args, messages):
 
         if response_type in [ "message", "web_search_call" ]:
             break
-        elif response_type == "function_call":
+        if response_type == "function_call":
             tool_call = response.output[0]
-            function_name = tool_call.name
 
             result = get_current_datetime_utc()
 
