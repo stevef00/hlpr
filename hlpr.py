@@ -10,6 +10,8 @@ import tempfile
 from datetime import datetime, timezone
 from openai import OpenAI
 from spinner import Spinner
+from tool import Tool
+
 
 # Available models
 ALLOWED_MODELS = [
@@ -20,13 +22,26 @@ ALLOWED_MODELS = [
     "gpt-4.1"
 ]
 
+
 def get_current_datetime_utc():
     """Return the current UTC datetime as a string."""
     return str(datetime.now(timezone.utc))
 
 
-def get_current_datetime_utc_tool():
-    tool_definition = {
+def get_uname():
+    """Return the uname command output"""
+    result = subprocess.run(["uname", "-a"], capture_output=True, text=True, check=True)
+    return result.stdout.strip()
+
+
+def get_uptime():
+    """Return the uptime command output"""
+    result = subprocess.run(["uptime"], capture_output=True, text=True, check=True)
+    return result.stdout.strip()
+
+
+TOOLS = [
+    Tool(get_current_datetime_utc, {
             "type": "function",
             "name": "get_current_datetime_utc",
             "description": "Get the current date and time in UTC",
@@ -37,8 +52,32 @@ def get_current_datetime_utc_tool():
                 "additionalProperties": False,
                 "required": []
             }
-        }
-    return tool_definition
+        }),
+    Tool(get_uptime, {
+            "type": "function",
+            "name": "get_uptime",
+            "description": "Get the system uptime",
+            "strict": True,
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+                "required": []
+            }
+        }),
+    Tool(get_uname, {
+            "type": "function",
+            "name": "get_uname",
+            "description": "Get the system uname output",
+            "strict": True,
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+                "required": []
+            }
+        })
+]
 
 
 def read_file(file_path):
@@ -140,11 +179,9 @@ def handle_set_command(setting, args, create_args):
         value = setting.split("=", 1)[1].strip().lower()
         args.web = value in ("1", "true", "on", "yes")
         if args.web:
-            print("DEBUG: enable web search")
             enable_web_search(create_args)
 
         else:
-            print("DEBUG: disable web search")
             disable_web_search(create_args)
 
     elif setting.startswith("stats="):
@@ -168,8 +205,10 @@ def responses_create(client, create_args, messages):
             break
         if response_type == "function_call":
             tool_call = response.output[0]
+            function_name = tool_call.name
 
-            result = get_current_datetime_utc()
+            tool = next((tool for tool in TOOLS if tool.function_name() == function_name), None)
+            result = tool.call()
 
             messages.append(tool_call)
             messages.append({
@@ -195,7 +234,8 @@ def repl_run(client, messages, args):
         "tools": []
     }
 
-    create_args["tools"].append(get_current_datetime_utc_tool())
+    for tool in TOOLS:
+        create_args["tools"].append(tool.definition)
 
     if args.web:
         create_args["tools"].append({
