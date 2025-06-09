@@ -7,7 +7,7 @@ class Tool:
         self.definition = tool_definition
 
         self.definition.setdefault("type", "function")
-        self.definition.setdefault("name", self.function)
+        self.definition.setdefault("name", self.function.__name__)
         self.definition.setdefault("strict", True)
         self.definition.setdefault("parameters", {})
 
@@ -18,5 +18,4 @@ class Tool:
         return self.function()
 
     def function_name(self):
-        print(f"DEBUG: returning function name for {self.function.__name__}")
         return self.function.__name__

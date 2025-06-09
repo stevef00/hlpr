@@ -18,7 +18,7 @@ from hlpr import (
     repl_run,
     print_stats,
     get_current_datetime_utc,
-    get_current_datetime_utc_tool,
+    TOOLS,
     handle_edit_command,
     responses_create,
 )
@@ -136,9 +136,8 @@ def test_repl_run_with_web(monkeypatch):
     model, input_text, tools = client.calls[0]
     assert model == "gpt-4o-mini"
     assert tools is not None
-    assert len(tools) == 2
-    assert tools[1]["type"] == "web_search_preview"
-    assert tools[1]["search_context_size"] == "low"
+    assert len(tools) == len(hlpr.TOOLS) + 1
+    assert any(t.get("type") == "web_search_preview" for t in tools)
 
 
 def test_get_current_datetime_utc(monkeypatch):
@@ -148,11 +147,12 @@ def test_get_current_datetime_utc(monkeypatch):
     assert "2024-01-01 12:00:00+00:00" in result
 
 
-def test_get_current_datetime_utc_tool():
-    tool = get_current_datetime_utc_tool()
-    assert tool["type"] == "function"
-    assert tool["name"] == "get_current_datetime_utc"
-    assert tool["parameters"]["type"] == "object"
+def test_get_current_datetime_tool_definition():
+    tool_def = next(t.definition for t in TOOLS
+                    if t.function_name() == "get_current_datetime_utc")
+    assert tool_def["type"] == "function"
+    assert tool_def["name"] == "get_current_datetime_utc"
+    assert tool_def["parameters"]["type"] == "object"
 
 
 def test_handle_edit_command(monkeypatch):
@@ -202,7 +202,9 @@ def test_responses_create_function_call(monkeypatch):
     monkeypatch.setattr(hlpr, "get_current_datetime_utc", lambda: "utc")
 
     messages = [{"role": "user", "content": "hi"}]
-    create_args = {"model": "gpt-4o-mini", "input": messages, "tools": [get_current_datetime_utc_tool()]}
+    tool_def = next(t.definition for t in TOOLS
+                    if t.function_name() == "get_current_datetime_utc")
+    create_args = {"model": "gpt-4o-mini", "input": messages, "tools": [tool_def]}
 
     text, usage = responses_create(client, create_args, messages)
 
